@@ -13,12 +13,9 @@ const maxErros = 6;
 
 function startGame() {
   if (nivelAtual >= niveis.length) {
-    document.getElementById("message").textContent = "Parabéns! Você venceu todos os níveis!";
-    document.getElementById("word-display").textContent = "";
-    document.getElementById("letters").innerHTML = "";
-    document.getElementById("tries-left").textContent = "";
-    document.getElementById("letters-progress").textContent = "";
-    document.getElementById("nivel-atual").textContent = "";
+    document.getElementById("jogo").style.display = "none";
+    document.getElementById("parabens").style.display = "flex";
+    iniciarFogos();
     return;
   }
 
@@ -76,7 +73,6 @@ function guessLetter(letra, btn) {
     if (erros >= maxErros) {
       document.getElementById("message").textContent = `Você perdeu! A palavra era: ${palavraSelecionada}. Voltando ao nível 1.`;
       disableAllButtons();
-      // volta para o nível 1 após 3 segundos
       setTimeout(() => {
         nivelAtual = 0;
         startGame();
@@ -93,6 +89,101 @@ function updateHangmanImage() {
 function disableAllButtons() {
   const buttons = document.querySelectorAll("#letters button");
   buttons.forEach(btn => btn.disabled = true);
+}
+
+function reiniciarJogo() {
+  nivelAtual = 0;
+  document.getElementById("parabens").style.display = "none";
+  document.getElementById("jogo").style.display = "block";
+  startGame();
+}
+
+function iniciarFogos() {
+  const canvas = document.getElementById("fogos");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let fogos = [];
+
+  function Firework() {
+    this.x = Math.random() * canvas.width;
+    this.y = canvas.height;
+    this.targetY = Math.random() * canvas.height / 2;
+    this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    this.radius = 2;
+    this.speed = 4;
+    this.exploded = false;
+    this.particles = [];
+  }
+
+  Firework.prototype.update = function () {
+    if (!this.exploded) {
+      this.y -= this.speed;
+      if (this.y <= this.targetY) {
+        this.exploded = true;
+        for (let i = 0; i < 30; i++) {
+          this.particles.push(new Particle(this.x, this.y, this.color));
+        }
+      }
+    }
+    this.particles.forEach(p => p.update());
+  };
+
+  Firework.prototype.draw = function () {
+    if (!this.exploded) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+    }
+    this.particles.forEach(p => p.draw());
+  };
+
+  function Particle(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.radius = 2;
+    this.color = color;
+    this.speed = Math.random() * 5 + 1;
+    this.angle = Math.random() * Math.PI * 2;
+    this.alpha = 1;
+  }
+
+  Particle.prototype.update = function () {
+    this.x += Math.cos(this.angle) * this.speed;
+    this.y += Math.sin(this.angle) * this.speed;
+    this.alpha -= 0.02;
+  };
+
+  Particle.prototype.draw = function () {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.restore();
+  };
+
+  function animate() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (Math.random() < 0.05) {
+      fogos.push(new Firework());
+    }
+
+    fogos.forEach(f => f.update());
+    fogos.forEach(f => f.draw());
+
+    fogos = fogos.filter(f => f.particles.some(p => p.alpha > 0) || !f.exploded);
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
 }
 
 window.onload = () => {
